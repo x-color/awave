@@ -78,6 +78,32 @@ struct MenuBarView: View {
               .overlay(
                 RoundedRectangle(cornerRadius: 5)
                   .stroke(
+                    appState.isModelNameValid
+                      ? Color(nsColor: .separatorColor)
+                      : Color.orange.opacity(0.6),
+                    lineWidth: 0.75
+                  )
+              )
+            }
+
+            fieldRow(label: "API Key") {
+              SecureField(
+                "",
+                text: $appState.apiKey,
+                prompt: Text("Optional")
+                  .foregroundColor(.tertiaryLabel)
+              )
+              .textFieldStyle(.plain)
+              .font(.system(size: 11, design: .monospaced))
+              .padding(.horizontal, 8)
+              .padding(.vertical, 5)
+              .background(
+                RoundedRectangle(cornerRadius: 5)
+                  .fill(Color(nsColor: .controlBackgroundColor))
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                  .stroke(
                     Color(nsColor: .separatorColor),
                     lineWidth: 0.75
                   )
@@ -89,6 +115,17 @@ struct MenuBarView: View {
                 Image(systemName: "exclamationmark.circle.fill")
                   .font(.system(size: 9))
                 Text("Enter a valid http/https URL.")
+                  .font(.system(size: 10))
+              }
+              .foregroundColor(.orange)
+              .padding(.top, 2)
+            }
+
+            if !appState.isModelNameValid {
+              HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.circle.fill")
+                  .font(.system(size: 9))
+                Text("Enter a model name.")
                   .font(.system(size: 10))
               }
               .foregroundColor(.orange)
@@ -187,6 +224,7 @@ struct MenuBarView: View {
 
       Spacer()
     }
+    .animation(.easeInOut(duration: 0.2), value: statusColorStyle)
   }
 
   private var statusIcon: String {
@@ -197,10 +235,26 @@ struct MenuBarView: View {
   }
 
   private var statusColor: Color {
-    if appState.isRecording { return .red }
-    if appState.isTranscribing { return .orange }
-    if appState.errorMessage != nil { return .orange }
-    return .green
+    switch statusColorStyle {
+    case .recording:
+      return Color(nsColor: .systemGreen)
+    case .error:
+      return Color(nsColor: .systemYellow)
+    case .idle:
+      return .primary
+    }
+  }
+
+  private var statusColorStyle: StatusColorStyle {
+    if appState.errorMessage != nil { return .error }
+    if appState.isRecording { return .recording }
+    return .idle
+  }
+
+  private enum StatusColorStyle: Equatable {
+    case idle
+    case recording
+    case error
   }
 
   private var statusText: String {

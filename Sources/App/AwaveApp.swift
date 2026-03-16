@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 @main
@@ -17,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem?
   private var popover: NSPopover?
   private var overlayWindowController: OverlayWindowController?
+  private var cancellables = Set<AnyCancellable>()
 
   private let appState = AppState()
   private let audioRecorder = AudioRecorderService()
@@ -35,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     if let button = statusItem?.button {
       button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")
+      button.image?.isTemplate = true
       button.action = #selector(togglePopover)
       button.target = self
     }
@@ -46,6 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       rootView: MenuBarView(appState: appState)
     )
     self.popover = popover
+
+    bindStatusItemAppearance()
   }
 
   private func setupOverlayWindow() {
@@ -80,6 +85,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     hotkeyManager.setup()
+  }
+
+  private func bindStatusItemAppearance() {
+    appState.$isRecording
+      .combineLatest(appState.$errorMessage)
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _, _ in
+        self?.updateStatusItemAppearance(animated: true)
+      }
+      .store(in: &cancellables)
+
+    updateStatusItemAppearance(animated: false)
+  }
+
+  private func updateStatusItemAppearance(animated: Bool) {
+    guard let button = statusItem?.button else { return }
+
+    let isColored = appState.isRecording || appState.errorMessage != nil
+    let image: NSImage?
+
+    if isColored {
+      let tint = appState.isRecording ? NSColor.systemGreen : NSColor.systemYellow
+      let config = NSImage.SymbolConfiguration(paletteColors: [tint])
+      image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")?
+        .withSymbolConfiguration(config)
+      image?.isTemplate = false
+    } else {
+      image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")
+      image?.isTemplate = true
+    }
+
+    if animated {
+      NSAnimationContext.runAnimationGroup { context in
+        context.duration = 0.25
+        context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        button.animator().image = image
+      }
+    } else {
+      button.image = image
+    }
   }
 
   private func startRecording() async {
@@ -133,10 +178,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let transcriptionService = self.transcriptionService
 
     do {
+      let apiKey = appState.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
       let text = try await transcriptionService.transcribe(
         audioURL: audioURL,
         baseURL: baseURL,
-        model: modelName
+        model: modelName,
+        apiKey: apiKey.isEmpty ? nil : apiKey
       )
       appState.finishTranscribing(text: text)
       overlayWindowController?.update(appState: appState)

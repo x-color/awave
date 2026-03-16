@@ -1,7 +1,8 @@
 import Foundation
 
 protocol TranscriptionServiceProtocol: AnyObject {
-  func transcribe(audioURL: URL, baseURL: URL, model: String) async throws -> String
+  func transcribe(audioURL: URL, baseURL: URL, model: String, apiKey: String?) async throws
+    -> String
 }
 
 final class TranscriptionService: TranscriptionServiceProtocol, @unchecked Sendable {
@@ -13,11 +14,16 @@ final class TranscriptionService: TranscriptionServiceProtocol, @unchecked Senda
     self.session = session
   }
 
-  func transcribe(audioURL: URL, baseURL: URL, model: String) async throws -> String {
+  func transcribe(audioURL: URL, baseURL: URL, model: String, apiKey: String?) async throws
+    -> String
+  {
     let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
 
     var request = URLRequest(url: endpoint)
     request.httpMethod = "POST"
+    if let apiKey, !apiKey.isEmpty {
+      request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+    }
 
     let boundary = UUID().uuidString
     request.setValue(

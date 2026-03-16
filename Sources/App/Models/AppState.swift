@@ -6,7 +6,10 @@ final class AppState: ObservableObject {
   private enum SettingsKey {
     static let apiEndpoint = "transcription.apiEndpoint"
     static let modelName = "transcription.modelName"
+    static let apiKey = "transcription.apiKey"
   }
+
+  private static let keychainServiceName = Bundle.main.bundleIdentifier ?? "com.awave"
 
   static let defaultAPIEndpoint = "http://localhost:8000"
   static let defaultModelName = "Systran/faster-whisper-small"
@@ -26,11 +29,34 @@ final class AppState: ObservableObject {
       UserDefaults.standard.set(modelName, forKey: SettingsKey.modelName)
     }
   }
+  @Published var apiKey: String {
+    didSet {
+      let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmed.isEmpty {
+        KeychainService.deletePassword(
+          service: Self.keychainServiceName,
+          account: SettingsKey.apiKey
+        )
+      } else {
+        KeychainService.savePassword(
+          trimmed,
+          service: Self.keychainServiceName,
+          account: SettingsKey.apiKey
+        )
+      }
+    }
+  }
 
   init() {
     let defaults = UserDefaults.standard
     apiEndpoint = defaults.string(forKey: SettingsKey.apiEndpoint) ?? Self.defaultAPIEndpoint
     modelName = defaults.string(forKey: SettingsKey.modelName) ?? Self.defaultModelName
+    apiKey =
+      KeychainService.readPassword(
+        service: Self.keychainServiceName,
+        account: SettingsKey.apiKey
+      )
+      ?? ""
   }
 
   var apiBaseURL: URL? {
@@ -45,6 +71,10 @@ final class AppState: ObservableObject {
 
   var isAPIEndpointValid: Bool {
     apiBaseURL != nil
+  }
+
+  var isModelNameValid: Bool {
+    !modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
   func updateAudioLevel(_ level: Float) {
