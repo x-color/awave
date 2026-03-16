@@ -1,6 +1,4 @@
-# AGENTS.md - AWAVE Development Guide
-
-This file provides guidance for agentic coding agents working on the AWAVE project.
+# AWAVE Development Guide
 
 ## Project Overview
 
@@ -12,7 +10,6 @@ AWAVE is a macOS menu bar application that records audio via a global hotkey and
 - Platform: macOS 14.0+
 - Package Manager: Swift Package Manager
 - UI Framework: SwiftUI
-- Key Dependencies: [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts)
 
 ### Dependencies
 
@@ -30,9 +27,22 @@ curl -s "localhost:8000/v1/audio/transcriptions" -F "file=@audio.wav" -F "model=
 # Build the project
 swift build
 
+# Build for release
+swift build -c release
+
 # Run the app
 swift run
 
-# Build for release
-swift build -c release
+# Format the code
+swift format -r --in-place .
+
+# Lint the code
+swift format lint -r -s .
 ```
+
+## Development Rules
+
+You must follow these rules during development:
+- Follow Swift best practices and style guidelines
+- Run formatting and linting after code changes every time
+- Run tests before reporting the task complete to the user

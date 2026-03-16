@@ -3,140 +3,159 @@ import SwiftUI
 
 @main
 struct AwaveApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+  @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    var body: some Scene {
-        Settings {
-            EmptyView()
-        }
+  var body: some Scene {
+    Settings {
+      EmptyView()
     }
+  }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
-    private var overlayWindowController: OverlayWindowController?
+  private var statusItem: NSStatusItem?
+  private var popover: NSPopover?
+  private var overlayWindowController: OverlayWindowController?
 
-    private let appState = AppState()
-    private let audioRecorder = AudioRecorderService()
-    nonisolated private let transcriptionService = TranscriptionService()
-    private let hotkeyManager = HotkeyManager()
-    private let pasteService = PasteService()
+  private let appState = AppState()
+  private let audioRecorder = AudioRecorderService()
+  nonisolated private let transcriptionService = TranscriptionService()
+  private let hotkeyManager = HotkeyManager()
+  private let pasteService = PasteService()
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        setupStatusItem()
-        setupOverlayWindow()
-        setupServices()
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    setupStatusItem()
+    setupOverlayWindow()
+    setupServices()
+  }
+
+  private func setupStatusItem() {
+    statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+
+    if let button = statusItem?.button {
+      button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")
+      button.action = #selector(togglePopover)
+      button.target = self
     }
 
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    let popover = NSPopover()
+    popover.contentSize = NSSize(width: 260, height: 280)
+    popover.behavior = .transient
+    popover.contentViewController = NSHostingController(
+      rootView: MenuBarView(appState: appState)
+    )
+    self.popover = popover
+  }
 
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")
-            button.action = #selector(togglePopover)
-            button.target = self
-        }
+  private func setupOverlayWindow() {
+    overlayWindowController = OverlayWindowController()
+  }
 
-        let popover = NSPopover()
-        popover.contentSize = NSSize(width: 260, height: 240)
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
-            rootView: MenuBarView(appState: appState)
-        )
-        self.popover = popover
+  private func setupServices() {
+    audioRecorder.onAudioLevel = { [weak self] level in
+      Task { @MainActor in
+        guard let self else { return }
+        self.appState.updateAudioLevel(level)
+        self.overlayWindowController?.update(appState: self.appState)
+      }
     }
 
-    private func setupOverlayWindow() {
-        overlayWindowController = OverlayWindowController()
+    audioRecorder.onError = { [weak self] error in
+      Task { @MainActor in
+        self?.appState.setError(error.localizedDescription)
+      }
     }
 
-    private func setupServices() {
-        audioRecorder.onAudioLevel = { [weak self] level in
-            Task { @MainActor in
-                guard let self else { return }
-                self.appState.updateAudioLevel(level)
-                self.overlayWindowController?.update(appState: self.appState)
-            }
-        }
-
-        audioRecorder.onError = { [weak self] error in
-            Task { @MainActor in
-                self?.appState.setError(error.localizedDescription)
-            }
-        }
-
-        hotkeyManager.onRecordStart = { [weak self] in
-            Task { @MainActor in
-                await self?.startRecording()
-            }
-        }
-
-        hotkeyManager.onRecordStop = { [weak self] in
-            Task { @MainActor in
-                await self?.stopRecording()
-            }
-        }
-
-        hotkeyManager.setup()
+    hotkeyManager.onRecordStart = { [weak self] in
+      Task { @MainActor in
+        await self?.startRecording()
+      }
     }
 
-    private func startRecording() async {
-        appState.startRecording()
-        overlayWindowController?.show(appState: appState)
-        overlayWindowController?.update(appState: appState)
-
-        do {
-            try await audioRecorder.startRecording()
-        } catch {
-            appState.setError(error.localizedDescription)
-            overlayWindowController?.hide()
-        }
+    hotkeyManager.onRecordStop = { [weak self] in
+      Task { @MainActor in
+        await self?.stopRecording()
+      }
     }
 
-    private func stopRecording() async {
-        guard appState.isRecording else { return }
+    hotkeyManager.setup()
+  }
 
-        let audioURL = audioRecorder.stopRecording()
-        appState.stopRecording()
-        overlayWindowController?.update(appState: appState)
+  private func startRecording() async {
+    appState.startRecording()
+    overlayWindowController?.show(appState: appState)
+    overlayWindowController?.update(appState: appState)
 
-        guard let url = audioURL else {
-            appState.setError("Failed to save recording")
-            return
-        }
+    do {
+      try await audioRecorder.startRecording()
+    } catch {
+      appState.setError(error.localizedDescription)
+      overlayWindowController?.hide()
+    }
+  }
 
-        await transcribe(audioURL: url)
+  private func stopRecording() async {
+    guard appState.isRecording else { return }
+
+    let audioURL = audioRecorder.stopRecording()
+    appState.stopRecording()
+    overlayWindowController?.update(appState: appState)
+
+    guard let url = audioURL else {
+      appState.setError("Failed to save recording")
+      return
     }
 
-    private func transcribe(audioURL: URL) async {
-        appState.startTranscribing()
-        overlayWindowController?.update(appState: appState)
+    await transcribe(audioURL: url)
+  }
 
-        // Capture a local reference to avoid data races
-        let transcriptionService = self.transcriptionService
-
-        do {
-            let text = try await transcriptionService.transcribe(audioURL: audioURL)
-            appState.finishTranscribing(text: text)
-            overlayWindowController?.update(appState: appState)
-            overlayWindowController?.hide()
-            pasteService.paste(text)
-        } catch {
-            appState.setError(error.localizedDescription)
-            overlayWindowController?.update(appState: appState)
-            overlayWindowController?.hide()
-        }
+  private func transcribe(audioURL: URL) async {
+    guard let baseURL = appState.apiBaseURL else {
+      appState.setError("Invalid API endpoint URL")
+      overlayWindowController?.update(appState: appState)
+      overlayWindowController?.hide()
+      return
     }
 
-    @objc private func togglePopover() {
-        guard let button = statusItem?.button, let popover = popover else { return }
-
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        }
+    let modelName = appState.modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !modelName.isEmpty else {
+      appState.setError("Model name is required")
+      overlayWindowController?.update(appState: appState)
+      overlayWindowController?.hide()
+      return
     }
+
+    appState.startTranscribing()
+    overlayWindowController?.update(appState: appState)
+
+    // Capture a local reference to avoid data races
+    let transcriptionService = self.transcriptionService
+
+    do {
+      let text = try await transcriptionService.transcribe(
+        audioURL: audioURL,
+        baseURL: baseURL,
+        model: modelName
+      )
+      appState.finishTranscribing(text: text)
+      overlayWindowController?.update(appState: appState)
+      overlayWindowController?.hide()
+      pasteService.paste(text)
+    } catch {
+      appState.setError(error.localizedDescription)
+      overlayWindowController?.update(appState: appState)
+      overlayWindowController?.hide()
+    }
+  }
+
+  @objc private func togglePopover() {
+    guard let button = statusItem?.button, let popover = popover else { return }
+
+    if popover.isShown {
+      popover.performClose(nil)
+    } else {
+      popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+  }
 }
