@@ -89,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func bindStatusItemAppearance() {
     appState.$isRecording
+      .combineLatest(appState.$isTranscribing)
       .combineLatest(appState.$errorMessage)
       .receive(on: RunLoop.main)
       .sink { [weak self] _, _ in
@@ -102,14 +103,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func updateStatusItemAppearance(animated: Bool) {
     guard let button = statusItem?.button else { return }
 
-    let isColored = appState.isRecording || appState.errorMessage != nil
     let image: NSImage?
 
-    if isColored {
-      let tint = appState.isRecording ? NSColor.systemGreen : NSColor.systemYellow
-      let config = NSImage.SymbolConfiguration(paletteColors: [tint])
+    if appState.isRecording || appState.isTranscribing {
       image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")?
-        .withSymbolConfiguration(config)
+        .withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [NSColor.systemGreen]))
+      image?.isTemplate = false
+    } else if appState.errorMessage != nil {
+      image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")?
+        .withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [NSColor.systemYellow]))
       image?.isTemplate = false
     } else {
       image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Awave")
