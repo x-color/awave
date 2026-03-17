@@ -1,3 +1,4 @@
+import Alamofire
 import Foundation
 
 protocol TranscriptionServiceProtocol: AnyObject {
@@ -5,12 +6,10 @@ protocol TranscriptionServiceProtocol: AnyObject {
     -> String
 }
 
-final class TranscriptionService: TranscriptionServiceProtocol, @unchecked Sendable {
-  private let session: URLSession
+final class TranscriptionService: TranscriptionServiceProtocol, Sendable {
+  private let session: Session
 
-  init(
-    session: URLSession = .shared
-  ) {
+  init(session: Session = .default) {
     self.session = session
   }
 
@@ -19,79 +18,49 @@ final class TranscriptionService: TranscriptionServiceProtocol, @unchecked Senda
   {
     let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
 
-    var request = URLRequest(url: endpoint)
-    request.httpMethod = "POST"
-    if let apiKey, !apiKey.isEmpty {
-      request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-    }
-
-    let boundary = UUID().uuidString
-    request.setValue(
-      "multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
-    let audioData = try Data(contentsOf: audioURL)
-    let body = createMultipartBody(
-      audioData: audioData,
-      audioFilename: audioURL.lastPathComponent,
-      boundary: boundary,
-      model: model
-    )
-    request.httpBody = body
-
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw TranscriptionError.invalidResponse
-    }
-
-    guard (200...299).contains(httpResponse.statusCode) else {
-      throw TranscriptionError.serverError(statusCode: httpResponse.statusCode)
-    }
-
-    let transcriptionResponse = try JSONDecoder().decode(TranscriptionResponse.self, from: data)
-    return transcriptionResponse.text
-  }
-
-  private func createMultipartBody(
-    audioData: Data,
-    audioFilename: String,
-    boundary: String,
-    model: String
-  ) -> Data {
-    var body = Data()
-
-    body.append("--\(boundary)\r\n".data(using: .utf8)!)
-    body.append(
-      "Content-Disposition: form-data; name=\"file\"; filename=\"\(audioFilename)\"\r\n".data(
-        using: .utf8)!)
-    body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
-    body.append(audioData)
-    body.append("\r\n".data(using: .utf8)!)
-
-    body.append("--\(boundary)\r\n".data(using: .utf8)!)
-    body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-    body.append("\(model)\r\n".data(using: .utf8)!)
-
-    body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-
-    return body
+    return
+      try await session
+      .upload(
+        multipartFormData: { $0.build(audioURL: audioURL, model: model) },
+        to: endpoint,
+        headers: .authorization(apiKey: apiKey)
+      )
+      .serializingDecodable(TranscriptionResponse.self)
+      .value
+      .text
   }
 }
 
-struct TranscriptionResponse: Codable {
+extension MultipartFormData {
+  fileprivate func build(audioURL: URL, model: String) {
+    append(
+      audioURL,
+      withName: "file",
+      fileName: audioURL.lastPathComponent,
+      mimeType: "audio/wav",
+    )
+    append(Data(model.utf8), withName: "model")
+  }
+}
+
+extension HTTPHeaders {
+  fileprivate static func authorization(apiKey: String?) -> HTTPHeaders {
+    guard let apiKey, !apiKey.isEmpty else { return [] }
+    return [.authorization(bearerToken: apiKey)]
+  }
+}
+
+private struct TranscriptionResponse: Decodable {
   let text: String
 }
 
 enum TranscriptionError: LocalizedError {
-  case invalidResponse
-  case serverError(statusCode: Int)
+  case serverError(statusCode: Int, message: String?)
 
   var errorDescription: String? {
     switch self {
-    case .invalidResponse:
-      return "Invalid response from server."
-    case .serverError(let statusCode):
-      return "Server error with status code: \(statusCode)"
+    case .serverError(let statusCode, let message):
+      return "Server error (\(statusCode)): \(message ?? "No details provided")"
     }
   }
 }
