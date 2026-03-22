@@ -36,7 +36,7 @@ struct MenuBarView: View {
               TextField(
                 "",
                 text: $appState.apiEndpoint,
-                prompt: Text(AppState.defaultAPIEndpoint)
+                prompt: Text("https://xxx")
                   .foregroundColor(.tertiaryLabel)
               )
               .disableAutocorrection(true)
@@ -63,7 +63,7 @@ struct MenuBarView: View {
               TextField(
                 "",
                 text: $appState.modelName,
-                prompt: Text(AppState.defaultModelName)
+                prompt: Text("Model Name")
                   .foregroundColor(.tertiaryLabel)
               )
               .disableAutocorrection(true)

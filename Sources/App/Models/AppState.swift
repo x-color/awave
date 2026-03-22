@@ -11,9 +11,6 @@ final class AppState: ObservableObject {
 
   private static let keychainServiceName = Bundle.main.bundleIdentifier ?? "com.awave"
 
-  static let defaultAPIEndpoint = "http://localhost:8000"
-  static let defaultModelName = "Systran/faster-whisper-small"
-
   @Published var isRecording: Bool = false
   @Published var currentLevel: Float = 0
   @Published var isTranscribing: Bool = false
@@ -49,8 +46,8 @@ final class AppState: ObservableObject {
 
   init() {
     let defaults = UserDefaults.standard
-    apiEndpoint = defaults.string(forKey: SettingsKey.apiEndpoint) ?? Self.defaultAPIEndpoint
-    modelName = defaults.string(forKey: SettingsKey.modelName) ?? Self.defaultModelName
+    apiEndpoint = defaults.string(forKey: SettingsKey.apiEndpoint) ?? ""
+    modelName = defaults.string(forKey: SettingsKey.modelName) ?? ""
     apiKey =
       KeychainService.readPassword(
         service: Self.keychainServiceName,
