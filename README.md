@@ -1,6 +1,6 @@
 # AWAVE
 
-AWAVE is a macOS menu bar application for privacy-friendly audio-to-text transcription. Hold a global hotkey to record, see a real-time waveform overlay, and have the transcription automatically pasted into your current app. Transcription is performed locally via a self-hosted [Speaches](https://github.com/speaches-ai/speaches/) server.
+AWAVE is a macOS menu bar application for privacy-friendly audio-to-text transcription. Hold a global hotkey to record, see a real-time waveform overlay, and have the transcription automatically pasted into your current app. Transcription is performed via an [OpenAI Audio Transcription API](https://platform.openai.com/docs/api-reference/audio/createTranscription) compatible API by default. If you want to transcribe audio locally, you can use a self-hosted [Speaches](https://github.com/speaches-ai/speaches/) server.
 
 ## Features
 
@@ -14,7 +14,6 @@ AWAVE is a macOS menu bar application for privacy-friendly audio-to-text transcr
 - macOS 14.0+
 - Swift 6.0+
 - Microphone access
-- [Speaches](https://github.com/speaches-ai/speaches) local transcription server
 
 ## Permissions
 
@@ -26,16 +25,8 @@ If permissions are denied, you can enable them in System Settings > Privacy & Se
 
 ## Installation & Setup
 
-1. **Clone this repository**
-2. **Start the Speaches server** before running AWAVE:
-   ```bash
-   $ curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.yaml
-   $ curl --silent --remote-name https://raw.githubusercontent.com/speaches-ai/speaches/master/compose.cpu.yaml
-   $ docker compose -f compose.cpu.yaml up
-
-   $ ./scripts/register.sh
-   ```
-3. **Build and run AWAVE:**
+1. (Optional) For local transcription: If you want to run transcription locally, start the Speaches server before running AWAVE.
+2. Build and run AWAVE
    ```bash
    $ swift build
    $ swift run
@@ -51,11 +42,8 @@ If permissions are denied, you can enable them in System Settings > Privacy & Se
 
 ## Configuration
 
-- **Hotkey:** Change the global hotkey from the menu bar popover
-- **Transcription server:** By default, AWAVE connects to `http://localhost:8000` and uses the `Systran/faster-whisper-small` model. You can modify this in the code if needed.
-
-## Development
-
-- Build: `swift build`
-- Run: `swift run`
-- Release build: `swift build -c release`
+Configure the following settings in the menu bar app:
+- Hotkey: Default is `Cmd+Shift+A`.
+- Transcription API endpoint
+- Transcription Model name
+- (Optional) OpenAI API key
