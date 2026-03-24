@@ -25,19 +25,19 @@ curl -s "localhost:8000/v1/audio/transcriptions" -F "file=@audio.wav" -F "model=
 
 ```bash
 # Build the project
-swift build
+just build
 
 # Build for release
-swift build -c release
+just build -c release
 
 # Run the app
-swift run
+just run
 
 # Format the code
-swift format -r --in-place .
+just format
 
 # Lint the code
-swift format lint -r -s .
+just lint
 ```
 
 ## Development Rules
