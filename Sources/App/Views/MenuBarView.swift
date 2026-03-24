@@ -10,7 +10,7 @@ extension Color {
 struct MenuBarView: View {
   @ObservedObject var appState: AppState
   @State private var accessibilityAllowed = PermissionService.accessibilityAllowed()
-  @State private var inputMonitoringAllowed = PermissionService.inputMonitoringAllowed()
+  @State private var microphoneAllowed = PermissionService.microphoneAllowed()
 
   var body: some View {
     VStack(spacing: 0) {
@@ -144,18 +144,20 @@ struct MenuBarView: View {
                 openAction: PermissionService.openAccessibilitySettings
               )
               permissionRow(
-                title: "Input Monitoring",
-                isAllowed: inputMonitoringAllowed,
-                requestAction: PermissionService.requestInputMonitoringPermission,
-                openAction: PermissionService.openInputMonitoringSettings
+                title: "Microphone",
+                isAllowed: microphoneAllowed,
+                requestAction: PermissionService.requestMicrophonePermission,
+                openAction: PermissionService.openMicrophoneSettings
               )
             }
-            if !accessibilityAllowed || !inputMonitoringAllowed {
+            if !accessibilityAllowed || !microphoneAllowed {
               HStack(spacing: 4) {
                 Image(systemName: "info.circle.fill")
                   .font(.system(size: 9))
-                Text("Required for hotkey and paste.")
-                  .font(.system(size: 10))
+                Text(
+                  "Microphone is required for recording. Accessibility is required for hotkey and paste."
+                )
+                .font(.system(size: 10))
               }
               .foregroundColor(.secondary)
               .padding(.top, 2)
@@ -347,7 +349,7 @@ struct MenuBarView: View {
 
   private func refreshPermissions() {
     accessibilityAllowed = PermissionService.accessibilityAllowed()
-    inputMonitoringAllowed = PermissionService.inputMonitoringAllowed()
+    microphoneAllowed = PermissionService.microphoneAllowed()
   }
 }
 

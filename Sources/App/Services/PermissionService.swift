@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import AppKit
 @preconcurrency import ApplicationServices
 import Foundation
@@ -14,25 +15,20 @@ enum PermissionService {
     AXIsProcessTrustedWithOptions(options)
   }
 
-  static func inputMonitoringAllowed() -> Bool {
-    if #available(macOS 10.15, *) {
-      return CGPreflightListenEventAccess()
-    }
-    return true
+  static func microphoneAllowed() -> Bool {
+    AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
   }
 
-  static func requestInputMonitoringPermission() {
-    if #available(macOS 10.15, *) {
-      CGRequestListenEventAccess()
-    }
+  static func requestMicrophonePermission() {
+    Task { _ = await AVCaptureDevice.requestAccess(for: .audio) }
   }
 
   static func openAccessibilitySettings() {
     openPrivacyPane(anchor: "Privacy_Accessibility")
   }
 
-  static func openInputMonitoringSettings() {
-    openPrivacyPane(anchor: "Privacy_InputMonitoring")
+  static func openMicrophoneSettings() {
+    openPrivacyPane(anchor: "Privacy_Microphone")
   }
 
   private static func openPrivacyPane(anchor: String) {
