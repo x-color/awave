@@ -25,20 +25,22 @@ If permissions are denied, you can enable them in System Settings > Privacy & Se
 
 ## Installation & Setup
 
-1. (Optional) For local transcription: If you want to run transcription locally, start the Speaches server before running AWAVE.
-2. Build and run AWAVE
-   ```bash
-   $ swift build
-   $ swift run
-   ```
+Clone the repository and install application to `/Applications`.
+
+```bash
+$ gh repo clone x-color/awave
+$ cd awave
+$ just install
+```
 
 ## Usage
 
-1. Launch AWAVE (it appears in the menu bar with a waveform icon)
-2. Press and hold the global hotkey (default: Cmd+Shift+A) to start recording
-3. Overlay waveform appears at the bottom of the screen
-4. Release the hotkey to stop recording
-5. Transcription is pasted into your current app automatically
+1. (Optional) For local transcription: If you want to run transcription locally, start the Speaches server before running AWAVE.
+2. Launch AWAVE (it appears in the menu bar with a waveform icon)
+3. Press and hold the global hotkey (default: Cmd+Shift+A) to start recording
+4. Overlay waveform appears at the bottom of the screen
+5. Release the hotkey to stop recording
+6. Transcription is pasted into your current app automatically
 
 ## Configuration
 
