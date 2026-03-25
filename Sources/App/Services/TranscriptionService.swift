@@ -16,7 +16,7 @@ final class TranscriptionService: TranscriptionServiceProtocol, Sendable {
   func transcribe(audioURL: URL, baseURL: URL, model: String, apiKey: String?) async throws
     -> String
   {
-    let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
+    let endpoint = baseURL.appendingPathComponent("audio/transcriptions")
 
     return
       try await session
