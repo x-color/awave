@@ -141,13 +141,11 @@ struct MenuBarView: View {
                 title: "Accessibility",
                 isAllowed: accessibilityAllowed,
                 requestAction: PermissionService.requestAccessibilityPermission,
-                openAction: PermissionService.openAccessibilitySettings
               )
               permissionRow(
                 title: "Microphone",
                 isAllowed: microphoneAllowed,
                 requestAction: PermissionService.requestMicrophonePermission,
-                openAction: PermissionService.openMicrophoneSettings
               )
             }
             if !accessibilityAllowed || !microphoneAllowed {
@@ -313,7 +311,6 @@ struct MenuBarView: View {
     title: String,
     isAllowed: Bool,
     requestAction: @escaping () -> Void,
-    openAction: @escaping () -> Void
   ) -> some View {
     HStack(spacing: 6) {
       Circle()
@@ -335,11 +332,6 @@ struct MenuBarView: View {
           Button("Enable") {
             requestAction()
             refreshPermissions()
-          }
-          .buttonStyle(ChipButtonStyle())
-
-          Button("Open") {
-            openAction()
           }
           .buttonStyle(ChipButtonStyle())
         }

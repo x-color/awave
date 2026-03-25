@@ -22,20 +22,4 @@ enum PermissionService {
   static func requestMicrophonePermission() {
     Task { _ = await AVCaptureDevice.requestAccess(for: .audio) }
   }
-
-  static func openAccessibilitySettings() {
-    openPrivacyPane(anchor: "Privacy_Accessibility")
-  }
-
-  static func openMicrophoneSettings() {
-    openPrivacyPane(anchor: "Privacy_Microphone")
-  }
-
-  private static func openPrivacyPane(anchor: String) {
-    guard
-      let url = URL(
-        string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)")
-    else { return }
-    NSWorkspace.shared.open(url)
-  }
 }
